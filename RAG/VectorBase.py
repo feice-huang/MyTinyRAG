@@ -30,7 +30,7 @@ class VectorStore:
     def persist(self, path: str = 'storage'):
         if not os.path.exists(path):
             os.makedirs(path)
-        with open(f"{path}/doecment.json", 'w', encoding='utf-8') as f:
+        with open(f"{path}/document.json", 'w', encoding='utf-8') as f:
             json.dump(self.document, f, ensure_ascii=False)
         if self.vectors:
             with open(f"{path}/vectors.json", 'w', encoding='utf-8') as f:
@@ -39,7 +39,7 @@ class VectorStore:
     def load_vector(self, path: str = 'storage'):
         with open(f"{path}/vectors.json", 'r', encoding='utf-8') as f:
             self.vectors = json.load(f)
-        with open(f"{path}/doecment.json", 'r', encoding='utf-8') as f:
+        with open(f"{path}/document.json", 'r', encoding='utf-8') as f:
             self.document = json.load(f)
 
     def get_similarity(self, vector1: List[float], vector2: List[float]) -> float:

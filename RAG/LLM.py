@@ -9,6 +9,8 @@
 '''
 import os
 from typing import Dict, List, Optional, Tuple, Union
+import requests
+import json
 
 PROMPT_TEMPLATE = dict(
     RAG_PROMPT_TEMPALTE="""使用以上下文来回答用户的问题。如果你不知道答案，就说你不知道。总是使用中文回答。
@@ -111,3 +113,70 @@ class ZhipuChat(BaseModel):
             temperature=0.1
         )
         return response.choices[0].message
+    
+
+class OllamaChat:
+    def __init__(self, model='default-model'):
+        """
+        初始化 OllamaChat 类
+        :param model: 使用的模型名称
+        """
+        self.model = model
+        self.api_url = "http://127.0.0.1:11434/api/generate"
+
+    def chat(self, question, history=None, context=None):
+        """
+        调用本地 Ollama API 生成回答
+        :param question: 用户的问题
+        :param history: 聊天历史（可选）
+        :param context: 上下文信息（可选）
+        :return: Ollama 模型的回答
+        """
+        if history is None:
+            history = []
+
+        payload = {
+            "model": self.model,
+            "prompt": self._build_prompt(question, history, context)
+        }
+        print("Payload:", payload)  # 打印请求负载
+        try:
+            response = requests.post(self.api_url, json=payload)
+            response.raise_for_status()
+            # 打印原始响应内容
+            print("Raw response:", response.text)
+
+            # 手动解析多行 JSON 响应
+            responses = response.text.strip().split("\n")
+            final_response = ""
+            for line in responses:
+                try:
+                    json_line = json.loads(line)
+                    if "response" in json_line and json_line["response"]:
+                        final_response += json_line["response"]
+                except json.JSONDecodeError as e:
+                    print(f"Error decoding line: {line}, error: {e}")
+
+            return final_response if final_response else "No response from Ollama."
+        except requests.exceptions.RequestException as e:
+            return f"Error communicating with Ollama API: {e}"
+        except ValueError as e:
+            return f"Error parsing JSON response: {e}"
+
+    def _build_prompt(self, question, history, context):
+        """
+        构建用于 Ollama API 的提示
+        :param question: 用户的问题
+        :param history: 聊天历史
+        :param context: 上下文信息
+        :return: 构建的提示字符串
+        """
+        prompt = ""
+        if context:
+            prompt += f"Context: {context}\n\n"
+        if history:
+            for i, (q, a) in enumerate(history):
+                prompt += f"Q{i + 1}: {q}\nA{i + 1}: {a}\n"
+        prompt += f"Q: {question}\nA:"
+        return prompt
+    
